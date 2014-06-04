@@ -97,6 +97,9 @@ class SecureFacility(object):
         self.todoList.remove(task)
         self.beingDoneList.append(task)
 
+    def done(self, task):
+        self.beingDoneList.remove(task)
+
     def get_task_for_type(self, employeeType):
         tasks_searched = Task.employeesTasksType[employeeType]
         return [task for task in self.todoList
