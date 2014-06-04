@@ -1,5 +1,6 @@
 from random import choice, randint
 from constants import EmployeeType
+from messaging import Message
 import libtcodpy as libtcod
 
 """This module handle Artifical Intelligence stuff."""
@@ -23,17 +24,17 @@ class EmployeeBehaviour(object):
         return self.behaviour == EmployeeBehaviour.WANDER
 
     def update(self, facility):
-        potential_tasks = facility.get_task_for_type(self.employeeType)
-        has_task = len(potential_tasks) > 0
+        potential_behaviours = facility.get_task_for_type(self.employeeType)
+        has_task = len(potential_behaviours) > 0
         if self.is_idle() and has_task:
-            task = potential_tasks[0]
+            task = potential_behaviours[0]
             self.set_behaviour(EmployeeBehaviour.TASK_MOVE)
             self.moveToTask(task, facility)
         else:
             self.follow_behaviour(facility)
 
     def follow_behaviour(self, facility):
-        self.tasks[self.behaviour](self, facility)
+        self.behaviours[self.behaviour](self, facility)
 
     def back_to_idleness(self):
         self.currentTask = None
@@ -73,14 +74,12 @@ class EmployeeBehaviour(object):
         """Cancel the current path and take a general direction.
         If the move is illegal, do not change the current path."""
         self.currentPath = None
-        print("Looking for a path between" +
                 str(self.location.getX()) + "," +
                 str(self.location.getY()) + " and " + str(x) + "," + str(y))
         self.currentPath =  facility.circulation.path_from_to(self.location.getX(),
                                         self.location.getY(),
                                         x,
                                         y)
-        print("Length path : " +str(libtcod.path_size(self.currentPath)))
 
     def move(self, facility):
         """Follow the current path toward a given direction."""
@@ -99,12 +98,24 @@ class EmployeeBehaviour(object):
                 self.set_behaviour(EmployeeBehaviour.WANDER)
 
     def doTask(self, facility):
-        pass
+        currentTaskType = self.currentTask.taskType
+        done = EmployeeBehaviour.tasks[currentTaskType](self, facility)
+        if done:
+            facility.done(self.currentTask)
+            self.back_to_idleness()
+
+    def dig(self, facility):
+        tile = facility.tiles[self.currentTask.location.getX()]\
+                        [self.currentTask.location.getY()]
+        tile.dig()
+        return not tile.solid
 
     # Class-level map to functions
-    tasks = {WANDER : wander,
+    behaviours = {WANDER : wander,
             TASK_MOVE : move,
             TASK_DO : doTask }
+
+    tasks = { Message.DIG : dig }
 
 def manhattan(x1, y1, x2, y2):
     return abs(x1-x2) - abs(y1-y2)
