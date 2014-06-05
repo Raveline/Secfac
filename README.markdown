@@ -30,6 +30,10 @@ control), Dungeon Keeper (base control gameplay) and
 Secfac is coded using only Python (2.7) and the libtcod library.
 It should run on any python-compatible OS.
 
+## Project status
+
+Currently being developped and not all finished. Not even close to be.
+
 ## Prototype ?
 
 Well to be frank I don't think Python is a good choice for this kind of
