@@ -6,6 +6,14 @@ from messaging import Message
 from ai import EmployeeBehaviour
 import libtcodpy as libtcod
 
+def walk_compute(xFrom, yFrom, xTo, yTo, user_data):
+    """This function is used for pathfinding. It will need to be
+    imrpoved to allow diagonal move ONLY for stairway patterns."""
+    if user_data[xTo][yTo].solid:
+        return 0
+    else:
+        return 1
+
 class Tile(object):
     def __init__(self, depth):
         self.depth = depth
@@ -20,21 +28,13 @@ class Tile(object):
 class FacilityPath(object):
     def __init__(self, tiles):
         self.tiles = tiles
-        self.build_path_map()
-
-    def build_path_map(self):
-        self.path_map = libtcod.map_new(MAP_WIDTH, MAP_HEIGHT)
-        for y in range(0, MAP_HEIGHT):
-            for x in range (0, MAP_WIDTH):
-                libtcod.map_set_properties(self.path_map
-                                        , x
-                                        , y
-                                        , False
-                                        , not self.tiles[x][y].solid)
-
 
     def path_from_to(self, ox, oy, dx, dy):
-        path = libtcod.path_new_using_map(self.path_map, 0)
+        path = libtcod.path_new_using_function(MAP_WIDTH,
+                                        MAP_HEIGHT,
+                                        walk_compute,
+                                        self.tiles,
+                                        1.41)
         libtcod.path_compute(path, ox, oy, dx, dy)
         return path
 
@@ -248,3 +248,4 @@ def build_tiles():
     return [[ Tile(y)
                 for y in range(MAP_HEIGHT) ]
                 for x in range(MAP_WIDTH) ]
+
