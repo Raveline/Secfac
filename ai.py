@@ -67,17 +67,23 @@ class EmployeeBehaviour(object):
             # repeting this too often
         else:
             self.moveTo(closest[0], closest[1], facility)
-            self.currentTask = task
-            facility.consume_task(self.currentTask)
+            if self.currentPath is not None:
+                self.currentTask = task
+                facility.consume_task(self.currentTask)
+            else:
+                self.back_to_idleness()
 
     def moveTo(self, x, y, facility):
         """Cancel the current path and take a general direction.
         If the move is illegal, do not change the current path."""
         self.currentPath = None
-        self.currentPath =  facility.circulation.path_from_to(self.location.getX(),
+        self.currentPath = facility.circulation.path_from_to(self.location.getX(),
                                         self.location.getY(),
                                         x,
                                         y)
+        if libtcod.path_size(self.currentPath) == 0:
+            libtcod.path_delete(self.currentPath)
+            self.currentPath = None
 
     def move(self, facility):
         """Follow the current path toward a given direction."""
