@@ -53,15 +53,86 @@ class FacilityPath(object):
         return [tile for tile in self.surrounding_tiles_of(x,y) if
             self.is_movement_possible(tile[0], tile[1])]
 
+class Elevator(object):
+    def __init__(self, location):
+        self.location = location
+        self.floors = [location.getY()]
+        # Current position of the elevator
+        self.cabin_position = location.getY()
+        # Floors where the elevator is called
+        self.call_at = []
+        # Current destinations required by passengers
+        self.destinations = []
+        self.stopping = False
+
+    def add_floor(self, depth):
+        self.floors.append(depth)
+        self.floors.sort()
+
+    def call(self, depth):
+        if not self.is_called_at(depth):
+            self.call_at.append(depth)
+
+    def can_go_to(self, depth):
+        return depth in self.floors
+
+    def arrives_at(self, depth):
+        if depth in self.call_at:
+            self.call_at.remove(depth)
+        if depth in self.destinations:
+            self.destinations.remove(depth)
+        self.cabin_position = depth
+
+    def is_called_at(self, depth):
+        return depth in self.call_at
+
+    def destination_or_call_in_current_direction(self):
+        potentials = []
+        call_and_dest = self.destinations + self.call_at
+        if self.location.dirY > 0:
+            potentials = [f for f in call_and_dest if f > self.cabin_position]
+        elif self.location.diry < 0:
+            potentials = [f for f in call_and_dest if f < self.cabin_position]
+        return len(potentials) > 0
+
+    def is_called_or_has_destination(self):
+        return len(self.destinations) > 0 or len(self.call_at) > 0
+
+    def decide_next_destination(self):
+        if self.location.dirY != 0:
+            if not self.destination_or_call_in_current_direction():
+                if self.is_called_or_has_destination():
+                    return self.location.dirY * (-1)
+                else:
+                    return 0 # Stop moving !
+            else:
+                return 1
+        else: # The cabin doesn't move
+            if not self.is_called_or_has_destination():
+                return 0
+            else: # Go up or go down ?
+                return self.arbitrate_between_calls()
+
+    def arbitrate_between_calls(self):
+        goUp = len([f for f in self.call_at if f < self.cabin_position])
+        goDown = len([f for f in self.call_at if f > self.cabin_position])
+        if goUp > goDown:
+            return -1
+        else:
+            return 1 # Note : means we go down if equality
+
 class SecureFacility(object):
     def __init__(self, tiles):
-        self.objects = {} # A dict of coord tuple and array of objects
+        self.objects = [] # A dict of coord tuple and array of objects
         self.tiles = tiles
         self.employees = []
         self.todoList = []
         self.beingDoneList = []
         self.circulation = FacilityPath(self.tiles)
         self.tick = 0
+
+    def add_object_on(self, x, y, obj):
+        self.objects.append(obj)
 
     def command(self, message):
         if message.complement() is not None:
