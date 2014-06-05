@@ -74,8 +74,6 @@ class EmployeeBehaviour(object):
         """Cancel the current path and take a general direction.
         If the move is illegal, do not change the current path."""
         self.currentPath = None
-                str(self.location.getX()) + "," +
-                str(self.location.getY()) + " and " + str(x) + "," + str(y))
         self.currentPath =  facility.circulation.path_from_to(self.location.getX(),
                                         self.location.getY(),
                                         x,
