@@ -1,2 +1,6 @@
 dig tile 4,4
+dig tile 4,5
+dig tile 4,6
+dig tile 4,7
+dig tile 4,8
 recruit worker
