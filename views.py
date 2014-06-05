@@ -72,8 +72,23 @@ class TilePainter(object):
         gradient = libtcod.color_gen_map(colors, index)
         self.color_map = upper + list(gradient)
 
-    def get_background_according_to_depth(self, depth):
-        return self.color_map[depth]
+    def get_char(self, depth, solid):
+        if depth > 3 and solid:
+            return libtcod.CHAR_BLOCK1
+        else:
+            return ord(' ')
+
+    def get_foreground(self, depth, solid):
+        if depth > 3 and solid:
+            return libtcod.black
+        else:
+            return None
+
+    def get_background(self, depth, solid):
+        if depth > 3 and not solid:
+            return libtcod.black
+        else:
+            return self.color_map[depth]
 
     def get_employee_color(self, employeeType):
         return self.employeeToColor[employeeType]
@@ -121,10 +136,12 @@ class DisplayTileCommand(DisplayCommand):
         will change each execution, after reading the proper information
         from the painter. Note : it could be worthwile to fuse the painter
         and this Command, here."""
-        self.background = self.tileGetter.get_background_according_to_depth(tile.depth)
+        self.background = self.tileGetter.get_background(tile.depth, tile.solid)
+        self.foreground = self.tileGetter.get_foreground(tile.depth, tile.solid)
         self.set_foreground(console, x, y)
         self.set_background(console, x, y)
-        self.display_char(console, x, y, ord(' '))
+        char = self.tileGetter.get_char(tile.depth, tile.solid)
+        self.display_char(console, x, y, char)
 
 class TimedDisplayCommand(DisplayCommand):
     def __init__(self, rythm, background = None, foreground = None):
