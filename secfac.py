@@ -4,12 +4,44 @@
 
 import libtcodpy as libtcod
 from sys import argv
-from messaging import Messenger, message_parser
+from messaging import Focusable, Messenger, Message, message_parser, messages
 from views import FacilityView
 from facility import buildFacility
 from constants import WIDTH, HEIGHT, MAP_WIDTH, MAP_HEIGHT
 
-class Prompt(object):
+class FacilityMap(Focusable):
+    def __init__(self):
+        self.areaSelectionMode = False
+        self.currentAction = Message.DIG
+        self.selectionStart = None
+        self.selectionEnd = None
+
+    def startSelection(self, x, y):
+        self.selectionStart = (x,y)
+
+    def extendSelectionTo(self, x, y):
+        if self.selectionStart[0] > x and self.selectionStart[1] > y:
+            self.selectionEnd = self.selectionStart
+            self.selectionStart = (x,y)
+        else:
+            self.selectionEnd = (x,y)
+
+    def pressedOn(self, x, y):
+        self.startSelection(x,y)
+
+    def movedOn(self, x, y):
+        self.extendSelectionTo(x,y)
+
+    def releasedOn(self, x, y):
+        self.extendSelectionTo(x,y)
+        self.endMessage()
+
+    def endMessage(self):
+        for x in range(self.selectionStart[0], self.selectionEnd[0]):
+            for y in range(self.selectionStart[1], self.selectionEnd[1]):
+                messages.receive(Message(self.currentAction, (x,y)))
+
+class Prompt(Focusable):
     def __init__(self):
         self.content = ""
 
@@ -31,11 +63,9 @@ class Prompt(object):
 
 
 def start_console():
-    libtcod.console_init_root(WIDTH, HEIGHT, "FabSec", libtcod.RENDERER_SDL)
+    libtcod.console_init_root(WIDTH, HEIGHT, "FabSec", False, libtcod.RENDERER_SDL)
     libtcod.sys_set_fps(60)
 
-# Global event system
-messages = Messenger()
 
 def read_command_file():
     """Debuggin' tool. Apply a series of commands."""
@@ -45,6 +75,7 @@ def read_command_file():
 
 if __name__ == "__main__":
     start_console()
+    libtcod.mouse_show_cursor(True)
     facility = buildFacility()
     view = FacilityView(facility)
     prompt = Prompt()
@@ -53,6 +84,7 @@ if __name__ == "__main__":
     output_console = libtcod.console_new(WIDTH, 1)
     messages.focus = prompt
     now = libtcod.sys_elapsed_milli()
+    game_mode = FacilityMap()
 
     no_commands = len(argv) > 1 and argv[1] == "noc"
     if not no_commands:
@@ -72,4 +104,4 @@ if __name__ == "__main__":
         libtcod.console_blit(prompt_console, 0,0,0,0,0,0,HEIGHT-2)
         libtcod.console_blit(output_console, 0,0,0,0,0,0,HEIGHT-1)
         libtcod.console_flush()
-        messages.poll(prompt, facility)
+        messages.poll(game_mode, facility)
