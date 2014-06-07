@@ -2,6 +2,31 @@
 
 import libtcodpy as libtcod
 
+class Focusable(object):
+    def __init__(self):
+        pass
+
+    def clicked(self):
+        pass
+
+    def delete_char(self):
+        pass
+
+    def enter(self):
+        pass
+
+    def append_char(self, char):
+        pass
+
+    def pressedOn(self, x, y):
+        pass
+
+    def movedOn(self, x, y):
+        pass
+
+    def releasedOn(self, x, y):
+        pass
+
 class Message(object):
     """An event, most of the time a player input translated into game-logic."""
     PUT = "PUT"
@@ -38,22 +63,38 @@ class Messenger(object):
         self.messages = []
         # Just a clean-your-prompt signal
         self.must_clean = False
+        # Flag for mouse left button drag
+        self.current_lclick = False
+        self.mouse = libtcod.Mouse()
+        self.key = libtcod.Key()
 
     def poll(self, focus, world):
+        libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS|libtcod.EVENT_MOUSE,self.key,self.mouse)
         self.poll_keys(focus)
+        self.poll_mouse(focus)
         self.poll_events(world)
 
+    def poll_mouse(self, focus):
+        if self.mouse.lbutton:
+            if not self.current_lclick:
+                self.current_lclick = True
+                focus.pressedOn(self.mouse.cx, self.mouse.cy)
+            else:
+                focus.movedOn(self.mouse.cx, self.mouse.cy)
+        elif self.mouse.lbutton_pressed:
+            focus.releasedOn(self.mouse.cx, self.mouse.cy)
+            self.current_lclick = False
+
     def poll_keys(self,focus):
-        key = libtcod.console_check_for_keypress()
-        if key.vk == libtcod.KEY_NONE:
+        if self.key.vk == libtcod.KEY_NONE:
             return
-        elif key.vk == libtcod.KEY_ESCAPE:
+        elif self.key.vk == libtcod.KEY_ESCAPE:
             self.quit = True
-        elif key.vk == libtcod.KEY_BACKSPACE:
+        elif self.key.vk == libtcod.KEY_BACKSPACE:
             self.focus.delete_char()
-        elif key.vk == libtcod.KEY_ENTER:
+        elif self.key.vk == libtcod.KEY_ENTER:
             self.focus.enter()
-        elif key.c != 0:
+        elif self.key.c != 0:
             self.focus.append_char(chr(key.c))
         return
 
@@ -121,3 +162,6 @@ def parseComplement(complement):
     else:
         element = complement[0]
     return complement[index:], element
+
+# Global event system
+messages = Messenger()
