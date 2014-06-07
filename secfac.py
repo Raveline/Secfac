@@ -37,8 +37,8 @@ class FacilityMap(Focusable):
         self.endMessage()
 
     def endMessage(self):
-        for x in range(self.selectionStart[0], self.selectionEnd[0]):
-            for y in range(self.selectionStart[1], self.selectionEnd[1]):
+        for x in range(self.selectionStart[0], self.selectionEnd[0] + 1):
+            for y in range(self.selectionStart[1], self.selectionEnd[1] + 1):
                 messages.receive(Message(self.currentAction, (x,y)))
 
 class Prompt(Focusable):
