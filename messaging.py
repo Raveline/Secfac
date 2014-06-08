@@ -32,6 +32,7 @@ class Message(object):
     PUT = "PUT"
     DIG = "DIG"
     TILE = "TILE"
+    BUILD = "BUILD"
     DISPLAY = "DISPLAY"
     RECRUIT = "RECRUIT"
     verbs = [PUT, DIG, RECRUIT]
