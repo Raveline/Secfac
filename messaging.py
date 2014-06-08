@@ -99,7 +99,7 @@ class Messenger(object):
         return
 
     def poll_events(self, world):
-        if self.has_world_message():
+        while self.has_world_message():
             message = self.consume_message()
             world.command(message)
 
