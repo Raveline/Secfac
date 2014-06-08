@@ -7,7 +7,23 @@ from sys import argv
 from messaging import Focusable, Messenger, Message, message_parser, messages
 from views import FacilityView
 from facility import buildFacility
-from constants import WIDTH, HEIGHT, MAP_WIDTH, MAP_HEIGHT
+from constants import WIDTH, HEIGHT, MAP_WIDTH, MAP_HEIGHT, EmployeeType
+
+class MenuPane(object):
+    def __init__(self, command_tree):
+        """Take a tree of commands to be displayed."""
+        self.commands=  command_tree
+        self.current_branch = self.commands
+
+class MenuItem(object):
+    ITEM_VERB = 0           # This item will carry a verb constant
+    ITEM_COMPLEMENT = 1     # This item will carry a complement constant
+    ITEM_NONE = 2           # This item carry no information, just children
+    def __init__(self, label, message_type, message_part, children = []):
+        self.label = label
+        self.message_type = message_type
+        self.message_part = message_part
+        self.children = children
 
 class FacilityMap(Focusable):
     def __init__(self):
@@ -79,12 +95,28 @@ if __name__ == "__main__":
     facility = buildFacility()
     view = FacilityView(facility)
     prompt = Prompt()
-    map_console = libtcod.console_new(WIDTH, HEIGHT)
+    map_console = libtcod.console_new(WIDTH-20, HEIGHT)
     prompt_console = libtcod.console_new(WIDTH,1)
     output_console = libtcod.console_new(WIDTH, 1)
     messages.focus = prompt
     now = libtcod.sys_elapsed_milli()
     game_mode = FacilityMap()
+
+
+    tree = MenuItem("Main menu", MenuItem.ITEM_NONE, None, [
+                MenuItem("(D)ig", MenuItem.ITEM_VERB, Message.DIG),
+                MenuItem("(B)uild", MenuItem.ITEM_VERB, Message.BUILD, [
+                    MenuItem("(E)levator", MenuItem.ITEM_COMPLEMENT, "")]),
+                MenuItem("(R)ecruit", MenuItem.ITEM_VERB, Message.RECRUIT, [
+                    MenuItem("(W)orker", MenuItem.ITEM_COMPLEMENT,
+                                        EmployeeType.WORKER),
+                    MenuItem("(S)ecurity guard", MenuItem.ITEM_COMPLEMENT,
+                                        EmployeeType.SECURITY),
+                    MenuItem("(R)esearcher", MenuItem.ITEM_COMPLEMENT,
+                                        EmployeeType.RESEARCH)])
+                ])
+
+    menu = MenuPane(tree)
 
     no_commands = len(argv) > 1 and argv[1] == "noc"
     if not no_commands:
@@ -100,7 +132,7 @@ if __name__ == "__main__":
         view.display(map_console, 0,0,WIDTH, HEIGHT, delta)
         prompt.display(prompt_console)
         messages.display(output_console)
-        libtcod.console_blit(map_console, 0,0,0,0,0,0,0)
+        libtcod.console_blit(map_console, 0,0,0,0,0,20,0)
         libtcod.console_blit(prompt_console, 0,0,0,0,0,0,HEIGHT-2)
         libtcod.console_blit(output_console, 0,0,0,0,0,0,HEIGHT-1)
         libtcod.console_flush()
