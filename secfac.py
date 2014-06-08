@@ -5,7 +5,7 @@
 import libtcodpy as libtcod
 from sys import argv
 from messaging import Focusable, Messenger, Message, message_parser, messages
-from views import FacilityView
+from views import FacilityView, MenuDisplay
 from facility import buildFacility
 from constants import WIDTH, HEIGHT, MAP_WIDTH, MAP_HEIGHT, EmployeeType
 
@@ -96,6 +96,7 @@ if __name__ == "__main__":
     view = FacilityView(facility)
     prompt = Prompt()
     map_console = libtcod.console_new(WIDTH-20, HEIGHT)
+    pane_console = libtcod.console_new(20, HEIGHT)
     prompt_console = libtcod.console_new(WIDTH,1)
     output_console = libtcod.console_new(WIDTH, 1)
     messages.focus = prompt
@@ -117,6 +118,7 @@ if __name__ == "__main__":
                 ])
 
     menu = MenuPane(tree)
+    menuDisplay = MenuDisplay(menu)
 
     no_commands = len(argv) > 1 and argv[1] == "noc"
     if not no_commands:
@@ -130,8 +132,10 @@ if __name__ == "__main__":
         now = libtcod.sys_elapsed_milli()
         facility.update(delta)
         view.display(map_console, 0,0,WIDTH, HEIGHT, delta)
+        menuDisplay.display(pane_console)
         prompt.display(prompt_console)
         messages.display(output_console)
+        libtcod.console_blit(pane_console, 0,0,0,0,0,0,0)
         libtcod.console_blit(map_console, 0,0,0,0,0,20,0)
         libtcod.console_blit(prompt_console, 0,0,0,0,0,0,HEIGHT-2)
         libtcod.console_blit(output_console, 0,0,0,0,0,0,HEIGHT-1)
