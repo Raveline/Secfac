@@ -4,6 +4,20 @@ import libtcodpy as libtcod
 from facility import Employee
 from constants import MAP_WIDTH, MAP_HEIGHT, EmployeeType
 
+class MenuDisplay(object):
+    def __init__(self, menu):
+        self.menu = menu
+
+    def display(self, console):
+        self.display_string(console, 1, self.menu.current_branch.label)
+        i = 3
+        for item in self.menu.current_branch.children:
+            i = i + 1
+            self.display_string(console, i, item.label)
+
+    def display_string(self, console, y, string):
+        libtcod.console_print(console, 0,y,string)
+
 class FacilityView(object):
     """An object that display the facility when asked to do so"""
     def __init__(self, facility):
