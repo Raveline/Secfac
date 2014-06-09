@@ -13,17 +13,24 @@ class MenuPane(object):
     def __init__(self, command_tree):
         """Take a tree of commands to be displayed."""
         self.commands=  command_tree
-        self.current_branch = self.commands
+        self.set_branch(self.commands)
+
+    def set_branch(self, branch):
+        self.current_branch = branch
+        self.shortcuts = [elem.shortcut for elem in\
+                                self.current_branch.children]
 
 class MenuItem(object):
     ITEM_VERB = 0           # This item will carry a verb constant
     ITEM_COMPLEMENT = 1     # This item will carry a complement constant
     ITEM_NONE = 2           # This item carry no information, just children
-    def __init__(self, label, message_type, message_part, children = []):
+    def __init__(self, label, shortcut, message_type,
+                message_part, children = []):
         self.label = label
         self.message_type = message_type
         self.message_part = message_part
         self.children = children
+        self.shortcut = shortcut
 
 class FacilityMap(Focusable):
     def __init__(self):
@@ -89,37 +96,38 @@ def read_command_file():
         content = f.readlines()
     return content
 
-if __name__ == "__main__":
-    start_console()
-    libtcod.mouse_show_cursor(True)
-    facility = buildFacility()
-    view = FacilityView(facility)
-    prompt = Prompt()
-    map_console = libtcod.console_new(WIDTH-20, HEIGHT)
-    pane_console = libtcod.console_new(20, HEIGHT)
-    prompt_console = libtcod.console_new(WIDTH,1)
-    output_console = libtcod.console_new(WIDTH, 1)
-    messages.focus = prompt
-    now = libtcod.sys_elapsed_milli()
-    game_mode = FacilityMap()
+class Screen(object):
+    """This class that manages offscreen console and focus."""
+    def __init__(self, facility, menu, prompt):
+        self.facilityDisplay = FacilityView(facility)
+        self.menuDisplay = MenuDisplay(menu)
+        self.build_consoles()
+        self.prompt = prompt
 
+    def build_consoles(self):
+        self.map_console = libtcod.console_new(WIDTH-20, HEIGHT)
+        self.pane_console = libtcod.console_new(20, HEIGHT)
+        self.prompt_console = libtcod.console_new(WIDTH,1)
+        self.output_console = libtcod.console_new(WIDTH, 1)
 
-    tree = MenuItem("Main menu", MenuItem.ITEM_NONE, None, [
-                MenuItem("(D)ig", MenuItem.ITEM_VERB, Message.DIG),
-                MenuItem("(B)uild", MenuItem.ITEM_VERB, Message.BUILD, [
-                    MenuItem("(E)levator", MenuItem.ITEM_COMPLEMENT, "")]),
-                MenuItem("(R)ecruit", MenuItem.ITEM_VERB, Message.RECRUIT, [
-                    MenuItem("(W)orker", MenuItem.ITEM_COMPLEMENT,
-                                        EmployeeType.WORKER),
-                    MenuItem("(S)ecurity guard", MenuItem.ITEM_COMPLEMENT,
-                                        EmployeeType.SECURITY),
-                    MenuItem("(R)esearcher", MenuItem.ITEM_COMPLEMENT,
-                                        EmployeeType.RESEARCH)])
-                ])
+    def display(self, delta):
+        self.facilityDisplay.display(self.map_console, 0,0,WIDTH, HEIGHT, delta)
+        self.menuDisplay.display(self.pane_console)
+        self.prompt.display(self.prompt_console)
+        # Global call to the display, will need to get this out
+        messages.display(self.output_console)
+        # Display chain is done : let's blit
+        self.blit()
 
-    menu = MenuPane(tree)
-    menuDisplay = MenuDisplay(menu)
+    def blit(self):
+        libtcod.console_blit(self.pane_console, 0,0,0,0,0,0,0)
+        libtcod.console_blit(self.map_console, 0,0,0,0,0,20,0)
+        libtcod.console_blit(self.prompt_console, 0,0,0,0,0,0,HEIGHT-2)
+        libtcod.console_blit(self.output_console, 0,0,0,0,0,0,HEIGHT-1)
+        # End of display : flush the console
+        libtcod.console_flush()
 
+def handle_arguments():
     no_commands = len(argv) > 1 and argv[1] == "noc"
     if not no_commands:
         commands = read_command_file()
@@ -127,17 +135,42 @@ if __name__ == "__main__":
             # Remove the \n and make upper caps
             command = command[:-1].upper()
             messages.receive(message_parser(command))
+
+def main_game_loop(facility, consoles):
+    now = libtcod.sys_elapsed_milli()
     while not messages.quit:
+        # Time computing
         delta = libtcod.sys_elapsed_milli() - now
         now = libtcod.sys_elapsed_milli()
-        facility.update(delta)
-        view.display(map_console, 0,0,WIDTH, HEIGHT, delta)
-        menuDisplay.display(pane_console)
-        prompt.display(prompt_console)
-        messages.display(output_console)
-        libtcod.console_blit(pane_console, 0,0,0,0,0,0,0)
-        libtcod.console_blit(map_console, 0,0,0,0,0,20,0)
-        libtcod.console_blit(prompt_console, 0,0,0,0,0,0,HEIGHT-2)
-        libtcod.console_blit(output_console, 0,0,0,0,0,0,HEIGHT-1)
-        libtcod.console_flush()
+        # Model update
         messages.poll(game_mode, facility)
+        facility.update(delta)
+        # Display !
+        consoles.display(delta)
+
+if __name__ == "__main__":
+    start_console()
+    libtcod.mouse_show_cursor(True)
+    facility = buildFacility()
+    game_mode = FacilityMap()
+
+    # TODO : read all that from a config file
+    tree = MenuItem("Main menu", MenuItem.ITEM_NONE, None, [
+                MenuItem("(D)ig", 'd', MenuItem.ITEM_VERB, Message.DIG),
+                MenuItem("(B)uild", 'b', MenuItem.ITEM_VERB, Message.BUILD, [
+                    MenuItem("(E)levator", 'e', MenuItem.ITEM_COMPLEMENT, "")]),
+                MenuItem("(R)ecruit", 'r', MenuItem.ITEM_VERB, Message.RECRUIT, [
+                    MenuItem("(W)orker", 'w', MenuItem.ITEM_COMPLEMENT,
+                                        EmployeeType.WORKER),
+                    MenuItem("(S)ecurity guard", 's', MenuItem.ITEM_COMPLEMENT,
+                                        EmployeeType.SECURITY),
+                    MenuItem("(R)esearcher", 'r', MenuItem.ITEM_COMPLEMENT,
+                                        EmployeeType.RESEARCH)])
+                ])
+
+    menu = MenuPane(tree)
+    prompt = Prompt()
+    screen = Screen(facility, menu, prompt)
+    # Use for debugging only, TODO : hide this, make it optional, whatever
+    main_game_loop(facility, screen)
+
