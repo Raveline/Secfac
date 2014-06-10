@@ -45,8 +45,9 @@ class MenuItem(object):
 class FacilityMap(Focusable):
     """Handle the main gameplay state. Manage selection, move on map,
     and pane menu navigation."""
-    def __init__(self, pane):
+    def __init__(self, pane, screen):
         self.pane = pane
+        self.screen = screen
         self.areaSelectionMode = False
         self.selectionStart = None
         self.selectionEnd = None
@@ -81,6 +82,12 @@ class FacilityMap(Focusable):
             self.pane.go_back()
         else:
             messages.receive(Message(Message.QUIT))
+
+    def tab(self):
+        if self.screen.consoles[Screen.PANE].visible:
+            self.screen.hide_pane()
+        else:
+            self.screen.show_pane()
 
     def append_char(self, char):
         submenu = self.pane.shortcuts.get(char, None)
@@ -131,34 +138,91 @@ def read_command_file():
         content = f.readlines()
     return content
 
+class Console(object):
+    def __init__(self, x,y,w,h, visible = True):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        self.visible = visible
+        self.create_console()
+
+    def redraw(self, w, h):
+        libtcod.console_delete(self.console)
+        self.w = w
+        self.h = h
+        self.create_console()
+
+    def create_console(self):
+        self.console = libtcod.console_new(self.w, self.h)
+
 class Screen(object):
+    MAP = 0
+    PANE = 1
+    PROMPT = 2
+    FEEDBACK = 3
+
     """This class that manages offscreen console and focus."""
     def __init__(self, facility, menu, prompt):
         self.facilityDisplay = FacilityView(facility)
         self.menuDisplay = MenuDisplay(menu)
         self.build_consoles()
         self.prompt = prompt
+        self.map_area = (20,0,WIDTH-20, HEIGHT-1)
 
     def build_consoles(self):
-        self.map_console = libtcod.console_new(WIDTH-20, HEIGHT)
-        self.pane_console = libtcod.console_new(20, HEIGHT)
-        self.prompt_console = libtcod.console_new(WIDTH,1)
-        self.output_console = libtcod.console_new(WIDTH, 1)
+        self.consoles = []
+        self.consoles.append(Console(20,0,WIDTH-20,HEIGHT))
+        self.consoles.append(Console(0,0,20,HEIGHT))
+        self.consoles.append(Console(0,HEIGHT-2,WIDTH, 1))
+        self.consoles.append(Console(0,HEIGHT-1,WIDTH, 1))
+
+    def get_real_console(self, console_id):
+        return self.consoles[console_id].console
 
     def display(self, delta):
-        self.facilityDisplay.display(self.map_console, 0,0,WIDTH, HEIGHT, delta)
-        self.menuDisplay.display(self.pane_console)
-        self.prompt.display(self.prompt_console)
+        self.facilityDisplay.display(self.get_real_console(Screen.MAP)
+                                    , 0,0,WIDTH, HEIGHT, delta)
+        if self.consoles[Screen.PANE].visible:
+            self.menuDisplay.display(self.get_real_console(Screen.PANE))
+        if self.consoles[Screen.PROMPT].visible:
+            self.prompt.display(self.get_real_console(Screen.PROMPT))
         # Global call to the display, will need to get this out
-        messages.display(self.output_console)
+        messages.display(self.get_real_console(Screen.FEEDBACK))
         # Display chain is done : let's blit
         self.blit()
 
+    def hide_pane(self):
+        self.consoles[Screen.PANE].visible = False
+        map_console = self.consoles[Screen.MAP]
+        map_console.x = 0
+        map_console.redraw(map_console.w + self.consoles[Screen.PANE].w
+                        , map_console.h)
+
+    def show_pane(self):
+        self.consoles[Screen.PANE].visible = True
+        map_console = self.consoles[Screen.MAP]
+        map_console.x = self.consoles[Screen.PANE].w
+        map_console.redraw(map_console.w + self.consoles[Screen.PANE].w
+                        , map_console.h)
+
+    def hide_prompt(self):
+        self.consoles[Screen.PROMPT].visible = False
+        map_console = self.consoles[Screen.MAP]
+        map_console.redraw(map_console.w,
+                        map_console.h + self.consoles[Screen.PROMPT].h)
+
+    def show_prompt(self):
+        self.consoles[Screen.PROMPT].visible = True
+        map_console = self.consoles[Screen.MAP]
+        map_console.redraw(map_console.h,
+                        map_console.h - self.consoles[PROMPT].h)
+
     def blit(self):
-        libtcod.console_blit(self.pane_console, 0,0,0,0,0,0,0)
-        libtcod.console_blit(self.map_console, 0,0,0,0,0,20,0)
-        libtcod.console_blit(self.prompt_console, 0,0,0,0,0,0,HEIGHT-2)
-        libtcod.console_blit(self.output_console, 0,0,0,0,0,0,HEIGHT-1)
+        for console in self.consoles:
+            if console.visible:
+                libtcod.console_blit(console.console, 0,0,0,0,0,
+                                        console.x, console.y)
         # End of display : flush the console
         libtcod.console_flush()
 
@@ -205,7 +269,7 @@ if __name__ == "__main__":
     menu = MenuPane(tree)
     prompt = Prompt()
     screen = Screen(facility, menu, prompt)
-    game_mode = FacilityMap(menu)
+    game_mode = FacilityMap(menu, screen)
     messages.focus = game_mode
     # Use for debugging only, TODO : hide this, make it optional, whatever
     main_game_loop(facility, screen)
