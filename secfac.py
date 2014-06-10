@@ -12,13 +12,23 @@ from constants import WIDTH, HEIGHT, MAP_WIDTH, MAP_HEIGHT, EmployeeType
 class MenuPane(object):
     def __init__(self, command_tree):
         """Take a tree of commands to be displayed."""
-        self.commands=  command_tree
-        self.set_branch(self.commands)
+        self.branch_stack = []
+        self.set_branch(command_tree)
+
+    def enter_branch(self, branch):
+        self.branch_stack.append(self.current_branch)
+        self.set_branch(branch)
 
     def set_branch(self, branch):
         self.current_branch = branch
-        self.shortcuts = [elem.shortcut for elem in\
-                                self.current_branch.children]
+        self.shortcuts = dict([(elem.shortcut,elem) for elem in\
+                                self.current_branch.children])
+
+    def can_go_back(self):
+        return self.branch_stack
+
+    def go_back(self):
+        self.set_branch(self.branch_stack.pop())
 
 class MenuItem(object):
     ITEM_VERB = 0           # This item will carry a verb constant
@@ -33,9 +43,11 @@ class MenuItem(object):
         self.shortcut = shortcut
 
 class FacilityMap(Focusable):
-    def __init__(self):
+    """Handle the main gameplay state. Manage selection, move on map,
+    and pane menu navigation."""
+    def __init__(self, pane):
+        self.pane = pane
         self.areaSelectionMode = False
-        self.currentAction = Message.DIG
         self.selectionStart = None
         self.selectionEnd = None
 
@@ -57,12 +69,35 @@ class FacilityMap(Focusable):
 
     def releasedOn(self, x, y):
         self.extendSelectionTo(x,y)
-        self.endMessage()
+        self.sendAreaMessage()
 
-    def endMessage(self):
+    def sendAreaMessage(self):
         for x in range(self.selectionStart[0], self.selectionEnd[0] + 1):
             for y in range(self.selectionStart[1], self.selectionEnd[1] + 1):
                 messages.receive(Message(self.currentAction, (x,y)))
+
+    def escape(self):
+        if self.pane.can_go_back():
+            self.pane.go_back()
+        else:
+            messages.receive(Message(Message.QUIT))
+
+    def append_char(self, char):
+        submenu = self.pane.shortcuts.get(char, None)
+        if submenu is not None:
+            if submenu.message_type == MenuItem.ITEM_VERB:
+                self.currentAction = submenu.message_part
+                self.currentComplement = None
+            if submenu.message_type == MenuItem.ITEM_COMPLEMENT:
+                # Ideally, here, we should divide between verbs with area
+                # which will require some more work before sending message
+                # and verbs without area, which will work now.
+                if self.currentAction in Message.area_verbs:
+                    self.currentComplement = submenu.message_part
+            if len(submenu.children):
+                self.pane.enter_branch(submenu)
+            else:
+                messages.receive(Message(self.currentAction, self.currentComplement))
 
 class Prompt(Focusable):
     def __init__(self):
@@ -152,10 +187,9 @@ if __name__ == "__main__":
     start_console()
     libtcod.mouse_show_cursor(True)
     facility = buildFacility()
-    game_mode = FacilityMap()
 
     # TODO : read all that from a config file
-    tree = MenuItem("Main menu", MenuItem.ITEM_NONE, None, [
+    tree = MenuItem("Main menu", '', MenuItem.ITEM_VERB, Message.VIEW, [
                 MenuItem("(D)ig", 'd', MenuItem.ITEM_VERB, Message.DIG),
                 MenuItem("(B)uild", 'b', MenuItem.ITEM_VERB, Message.BUILD, [
                     MenuItem("(E)levator", 'e', MenuItem.ITEM_COMPLEMENT, "")]),
@@ -171,6 +205,8 @@ if __name__ == "__main__":
     menu = MenuPane(tree)
     prompt = Prompt()
     screen = Screen(facility, menu, prompt)
+    game_mode = FacilityMap(menu)
+    messages.focus = game_mode
     # Use for debugging only, TODO : hide this, make it optional, whatever
     main_game_loop(facility, screen)
 
