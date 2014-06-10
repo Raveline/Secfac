@@ -12,6 +12,9 @@ class Focusable(object):
     def delete_char(self):
         pass
 
+    def escape(self):
+        pass
+
     def enter(self):
         pass
 
@@ -35,7 +38,10 @@ class Message(object):
     BUILD = "BUILD"
     DISPLAY = "DISPLAY"
     RECRUIT = "RECRUIT"
-    verbs = [PUT, DIG, RECRUIT]
+    VIEW = "VIEW"
+    QUIT = "QUIT_GAME"
+    verbs = [PUT, DIG, RECRUIT, QUIT]
+    area_verbs = [PUT, DIG, BUILD]
 
     def __init__(self, verb, complement = None):
         self.verb = verb
@@ -90,14 +96,16 @@ class Messenger(object):
         if self.key.vk == libtcod.KEY_NONE:
             return
         elif self.key.vk == libtcod.KEY_ESCAPE:
-            self.quit = True
+            self.focus.escape()
         elif self.key.vk == libtcod.KEY_BACKSPACE:
             self.focus.delete_char()
         elif self.key.vk == libtcod.KEY_ENTER:
             self.focus.enter()
         elif self.key.c != 0:
-            self.focus.append_char(chr(key.c))
-        return
+            self.focus.append_char(chr(self.key.c))
+
+        if self.has_quit_message():
+            self.quit = True
 
     def poll_events(self, world):
         while self.has_world_message():
@@ -116,12 +124,15 @@ class Messenger(object):
             libtcod.console_clear(console)
             libtcod.console_print(console, 0,0,message.complement())
 
+    def has_quit_message(self):
+        return self.has_messages() and self.messages[0].getVerb() in [Message.QUIT]
+
     def has_display_message(self):
-        return self.has_messages() and self.messages[0].getVerb() == Message.DISPLAY
+        return self.has_messages() and self.messages[0].getVerb() in [Message.DISPLAY]
 
     def has_world_message(self):
         return self.has_messages() and \
-                self.messages[0].getVerb() in [Message.DIG, Message.RECRUIT]
+                self.messages[0].getVerb() in [Message.DIG, Message.RECRUIT, Message.BUILD]
 
     def has_messages(self):
         return len(self.messages)
