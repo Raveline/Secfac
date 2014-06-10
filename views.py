@@ -9,6 +9,7 @@ class MenuDisplay(object):
         self.menu = menu
 
     def display(self, console):
+        libtcod.console_clear(console)
         self.display_string(console, 1, self.menu.current_branch.label)
         i = 3
         for item in self.menu.current_branch.children:
