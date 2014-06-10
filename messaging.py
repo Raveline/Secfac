@@ -9,6 +9,9 @@ class Focusable(object):
     def clicked(self):
         pass
 
+    def tab(self):
+        pass
+
     def delete_char(self):
         pass
 
@@ -97,6 +100,8 @@ class Messenger(object):
             return
         elif self.key.vk == libtcod.KEY_ESCAPE:
             self.focus.escape()
+        elif self.key.vk == libtcod.KEY_TAB:
+            self.focus.tab()
         elif self.key.vk == libtcod.KEY_BACKSPACE:
             self.focus.delete_char()
         elif self.key.vk == libtcod.KEY_ENTER:
