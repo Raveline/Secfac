@@ -48,8 +48,8 @@ class FacilityView(object):
                                                                 tox, toy)
         # First, inactive tasks
         for task in tasks:
-            self.allTradeDisplayer.execute(task.location.x,
-                            task.location.y, ' ', console)
+            self.allTradeDisplayer.execute(task.location.x - fromx,
+                            task.location.y - fromy, ' ', console)
         # Then, active ones
         for task in active_tasks:
             self.activeTaskDisplayer.execute(tick
