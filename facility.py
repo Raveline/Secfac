@@ -142,9 +142,8 @@ class SecureFacility(object):
                 self.add_employee(message.complement())
 
     def add_employee(self, employeeType):
-        if employeeType in Employee.jobs:
-            employee = Employee(Employee.jobs[employeeType])
-            self.employees.append(employee)
+        employee = Employee(employeeType)
+        self.employees.append(employee)
 
     def add_dig(self, location):
         # Cannot dig above ground !
@@ -225,10 +224,6 @@ class Location(Position):
             self.y = nextY
 
 class Employee(object):
-    jobs = { 'WORKER' : EmployeeType.WORKER
-            , 'SECURITY' : EmployeeType.SECURITY
-            , 'RESEARCH' : EmployeeType.RESEARCH }
-
     def __init__(self, employeeType):
         self.employeeType = employeeType
         self.location = Location(0,3)
