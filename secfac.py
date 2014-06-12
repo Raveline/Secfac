@@ -6,7 +6,7 @@ import libtcodpy as libtcod
 from sys import argv
 from messaging import Focusable, Messenger, Message, message_parser, messages
 from views import FacilityView, MenuDisplay
-from facility import buildFacility
+from facility import buildFacility, Position
 from constants import WIDTH, HEIGHT, MAP_WIDTH, MAP_HEIGHT, EmployeeType
 
 class MenuPane(object):
@@ -49,6 +49,7 @@ class FacilityMap(Focusable):
         self.pane = pane
         self.screen = screen
         self.areaSelectionMode = False
+        self.currentAction = Message.VIEW
         self.selectionStart = None
         self.selectionEnd = None
 
@@ -63,19 +64,30 @@ class FacilityMap(Focusable):
             self.selectionEnd = (x,y)
 
     def pressedOn(self, x, y):
-        self.startSelection(x,y)
+        (x,y) = self.screen.local_to_global(x,y)
+        if self.currentAction is not Message.VIEW:
+            self.extendSelectionTo(x,y)
+        else:
+            self.screen.move_center(x,y)
 
     def movedOn(self, x, y):
-        self.extendSelectionTo(x,y)
+        (x,y) = self.screen.local_to_global(x,y)
+        if self.currentAction is not Message.VIEW:
+            self.extendSelectionTo(x,y)
+        else:
+            self.screen.move_center(x,y)
 
     def releasedOn(self, x, y):
-        self.extendSelectionTo(x,y)
-        self.sendAreaMessage()
+        (x,y) = self.screen.local_to_global(x,y)
+        if self.currentAction is not Message.VIEW:
+            self.extendSelectionTo(x,y)
+            self.sendAreaMessage()
 
     def sendAreaMessage(self):
-        for x in range(self.selectionStart[0], self.selectionEnd[0] + 1):
-            for y in range(self.selectionStart[1], self.selectionEnd[1] + 1):
-                messages.receive(Message(self.currentAction, (x,y)))
+        if self.currentAction is not Message.VIEW:
+            for x in range(self.selectionStart[0], self.selectionEnd[0] + 1):
+                for y in range(self.selectionStart[1], self.selectionEnd[1] + 1):
+                    messages.receive(Message(self.currentAction, (x,y)))
 
     def escape(self):
         if self.pane.can_go_back():
@@ -156,6 +168,70 @@ class Console(object):
     def create_console(self):
         self.console = libtcod.console_new(self.w, self.h)
 
+class Viewport(object):
+    def __init__(self, w, h, worldW, worldH):
+        self.position = Position(0,0)
+        self.worldW = worldW
+        self.worldH = worldH
+        self.redraw(w,h)
+
+    def getX(self):
+        return self.position.getX()
+
+    def getY(self):
+        return self.position.getY()
+
+    def getX2(self):
+        return self.position.getX() + self.w
+
+    def getY2(self):
+        return self.position.getY() + self.h
+
+    def redraw(self, w, h):
+        self.w = w
+        self.h = h
+        self.focusX = w/2
+        self.focusY = h/2
+        self.maxX = self.worldW - self.w
+        self.maxY = self.worldH - self.h
+
+    def move(self, centerx, centery):
+        minx = self.position.x + self.focusX
+        miny = self.position.y + self.focusY
+        if centerx < minx:
+            self.position.x = self.position.x - (minx-centerx)
+        if centery < miny:
+            self.position.y = self.position.y - (miny-centery)
+        if centerx > minx:
+            self.position.x = self.position.x + (centerx - minx)
+        if centery > miny:
+            self.position.y = self.position.y + (centery - miny)
+        self.clamp()
+
+    def clamp(self):
+        if self.position.x < 0:
+            self.position.x = 0
+        if self.position.y < 0:
+            self.position.y = 0
+        if self.position.x > self.maxX:
+            self.position.x = self.maxX
+        if self.position.y > self.maxY:
+            self.position.y = self.maxY
+
+class MapConsole(Console):
+    """Just a console with a viewport."""
+    def __init__(self, x, y, w, h, visible, viewport):
+        super(MapConsole, self).__init__(x,y,w,h,visible)
+        self.viewport = viewport
+
+    def redraw(self, w, h):
+        super(MapConsole, self).redraw(w, h)
+        self.viewport.redraw(w, h)
+
+    def local_to_global(self, x, y):
+        return (x + self.viewport.position.x - self.x
+               ,y + self.viewport.position.y - self.y)
+
 class Screen(object):
     MAP = 0
     PANE = 1
@@ -166,13 +242,14 @@ class Screen(object):
     def __init__(self, facility, menu, prompt):
         self.facilityDisplay = FacilityView(facility)
         self.menuDisplay = MenuDisplay(menu)
-        self.build_consoles()
         self.prompt = prompt
         self.map_area = (20,0,WIDTH-20, HEIGHT-1)
+        self.viewport = Viewport(WIDTH-20, HEIGHT, MAP_WIDTH, MAP_HEIGHT)
+        self.build_consoles()
 
     def build_consoles(self):
         self.consoles = []
-        self.consoles.append(Console(20,0,WIDTH-20,HEIGHT))
+        self.consoles.append(MapConsole(20,0,WIDTH-20,HEIGHT, True, self.viewport))
         self.consoles.append(Console(0,0,20,HEIGHT))
         self.consoles.append(Console(0,HEIGHT-2,WIDTH, 1))
         self.consoles.append(Console(0,HEIGHT-1,WIDTH, 1))
@@ -181,8 +258,13 @@ class Screen(object):
         return self.consoles[console_id].console
 
     def display(self, delta):
-        self.facilityDisplay.display(self.get_real_console(Screen.MAP)
-                                    , 0,0,WIDTH, HEIGHT, delta)
+        map_console = self.consoles[self.MAP]
+        self.facilityDisplay.display(map_console.console
+                                    ,map_console.viewport.getX()
+                                    ,map_console.viewport.getY()
+                                    ,map_console.viewport.getX2()
+                                    ,map_console.viewport.getY2()
+                                    ,delta)
         if self.consoles[Screen.PANE].visible:
             self.menuDisplay.display(self.get_real_console(Screen.PANE))
         if self.consoles[Screen.PROMPT].visible:
@@ -218,6 +300,9 @@ class Screen(object):
         map_console.redraw(map_console.h,
                         map_console.h - self.consoles[PROMPT].h)
 
+    def move_center(self, x, y):
+        self.consoles[Screen.MAP].viewport.move(x,y)
+
     def blit(self):
         for console in self.consoles:
             if console.visible:
@@ -225,6 +310,9 @@ class Screen(object):
                                         console.x, console.y)
         # End of display : flush the console
         libtcod.console_flush()
+
+    def local_to_global(self, x, y):
+        return self.consoles[Screen.MAP].local_to_global(x,y)
 
 def handle_arguments():
     no_commands = len(argv) > 1 and argv[1] == "noc"
