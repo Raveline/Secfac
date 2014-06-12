@@ -187,14 +187,11 @@ class SecureFacility(object):
             employee.behaviour.update(self)
             employee.location.update(self)
 
-
-class Location(object):
+class Position(object):
     """A simple container to provide cartesian coordinates."""
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.dirX = 0
-        self.dirY = 0
 
     def getX(self):
         return self.x
@@ -205,6 +202,13 @@ class Location(object):
     def isIn(self, x1,y1,x2,y2):
         return self.x >= x1 and self.x <= x2 \
                 and self.y >= y1 and self.y <= y2
+
+class Location(Position):
+    """A position and a directional vector."""
+    def __init__(self, x, y):
+        super(Location, self).__init__(x,y)
+        self.dirX = 0
+        self.dirY = 0
 
     def freeze(self):
         self.moveTowards(0,0)
