@@ -38,7 +38,8 @@ class FacilityView(object):
     def display_tiles(self, console, fromx, fromy, tox, toy):
         for y in range(fromy, toy):
             for x in range(fromx, tox):
-                self.tileDisplayer.execute(self.facility.tiles[x][y], x, y, console)
+                self.tileDisplayer.execute(self.facility.tiles[x][y],
+                                        x-fromx, y-fromy, console)
 
     def display_tasks(self, console, tick, fromx, fromy, tox, toy):
         tasks = self.facility.extract_tasks_in(fromx, fromy, tox, toy)
@@ -83,7 +84,7 @@ class TilePainter(object):
     def build_map(self):
         upper = [libtcod.white, libtcod.lighter_grey, libtcod.blue, libtcod.green]
         colors = [libtcod.darker_grey, libtcod.black]
-        index = [0, 100]
+        index = [0, MAP_HEIGHT]
         gradient = libtcod.color_gen_map(colors, index)
         self.color_map = upper + list(gradient)
 
