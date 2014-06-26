@@ -2,7 +2,7 @@
 
 import libtcodpy as libtcod
 from facility import Employee
-from constants import MAP_WIDTH, MAP_HEIGHT, EmployeeType
+from constants import GROUND, MAP_WIDTH, MAP_HEIGHT, EmployeeType
 
 class MenuDisplay(object):
     def __init__(self, menu):
@@ -82,26 +82,28 @@ class TilePainter(object):
         self.build_map()
 
     def build_map(self):
-        upper = [libtcod.white, libtcod.lighter_grey, libtcod.blue, libtcod.green]
+        upper = [libtcod.blue, libtcod.white, libtcod.grey,
+        libtcod.lighter_grey, libtcod.blue, libtcod.blue,
+        libtcod.blue, libtcod.blue, libtcod.blue, libtcod.green]
         colors = [libtcod.darker_grey, libtcod.black]
         index = [0, MAP_HEIGHT]
         gradient = libtcod.color_gen_map(colors, index)
         self.color_map = upper + list(gradient)
 
     def get_char(self, depth, solid):
-        if depth > 3 and solid:
+        if depth > GROUND and solid:
             return libtcod.CHAR_BLOCK1
         else:
             return ord(' ')
 
     def get_foreground(self, depth, solid):
-        if depth > 3 and solid:
+        if depth > GROUND and solid:
             return libtcod.black
         else:
             return None
 
     def get_background(self, depth, solid):
-        if depth > 3 and not solid:
+        if depth > GROUND and not solid:
             return libtcod.black
         else:
             return self.color_map[depth]

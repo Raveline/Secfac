@@ -1,10 +1,11 @@
 """This module contains gameplay classes connected
 to the facility the player has to manage."""
 
-from constants import MAP_WIDTH, MAP_HEIGHT, EmployeeType
+from constants import GROUND, MAP_WIDTH, MAP_HEIGHT, EmployeeType
 from messaging import Message
 from ai import EmployeeBehaviour
 import libtcodpy as libtcod
+
 
 def walk_compute(xFrom, yFrom, xTo, yTo, user_data):
     """This function is used for pathfinding. It will need to be
@@ -17,7 +18,7 @@ def walk_compute(xFrom, yFrom, xTo, yTo, user_data):
 class Tile(object):
     def __init__(self, depth):
         self.depth = depth
-        self.solid = self.depth > 3
+        self.solid = self.depth > GROUND
         self.resistance = 5
 
     def dig(self):
@@ -226,7 +227,7 @@ class Location(Position):
 class Employee(object):
     def __init__(self, employeeType):
         self.employeeType = employeeType
-        self.location = Location(0,3)
+        self.location = Location(0,GROUND)
         self.behaviour = EmployeeBehaviour(self.location, self.employeeType)
 
 class Task(object):
