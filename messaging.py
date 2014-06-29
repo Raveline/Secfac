@@ -77,6 +77,10 @@ class Messenger(object):
         self.current_lclick = False
         self.mouse = libtcod.Mouse()
         self.key = libtcod.Key()
+        # Last position shall be cached here since libtcod is somewhat buggy
+        # there
+        self.lastX = 0
+        self.lastY = 0
 
     def poll(self, focus, world):
         libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS|libtcod.EVENT_MOUSE,self.key,self.mouse)
@@ -94,6 +98,12 @@ class Messenger(object):
         elif self.mouse.lbutton_pressed:
             focus.releasedOn(self.mouse.cx, self.mouse.cy)
             self.current_lclick = False
+        else:
+            mouse_move_x = self.mouse.cx - self.lastX
+            mouse_move_y = self.mouse.cy - self.lastY
+            self.lastX = self.mouse.cx
+            self.lastY = self.mouse.cy
+            focus.move_crosshair(mouse_move_x, mouse_move_y)
 
     def poll_keys(self,focus):
         if self.key.vk == libtcod.KEY_NONE:

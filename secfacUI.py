@@ -2,7 +2,38 @@ import libtcodpy as libtcod
 from messaging import Focusable, Message, messages
 from views import FacilityView, MenuDisplay
 from constants import WIDTH, HEIGHT, MAP_WIDTH, MAP_HEIGHT
-from facility import Position
+from facility import Position, Rectangle
+
+class Selection(Rectangle):
+    def __init__(self, x, y, x2, y2):
+        super(Selection, self).__init__(x,y,x2,y2)
+        self.crosshair = True
+
+    def move(self, vx, vy):
+        self.x = self.x + vx
+        self.y = self.y + vy
+        self.x2 = self.x
+        self.y2 = self.y
+
+    def startSelection(self, x, y):
+        self.x = x
+        self.x2 = x
+        self.y = y
+        self.y2 = y
+        self.crosshair = False
+
+    def extendSelectionTo(self, x, y):
+        if self.x > x and self.y > y:
+            self.x2 = self.x
+            self.y2 = self.y
+            self.x = x
+            self.y = y
+        else:
+            self.x2 = x
+            self.y2 = y
+
+    def endSelection(self):
+        self.crosshair = True
 
 class MenuPane(object):
     def __init__(self, command_tree):
@@ -41,48 +72,41 @@ class MenuItem(object):
 class FacilityMap(Focusable):
     """Handle the main gameplay state. Manage selection, move on map,
     and pane menu navigation."""
-    def __init__(self, pane, screen):
+    def __init__(self, pane, screen, selection):
         self.pane = pane
         self.screen = screen
         self.areaSelectionMode = False
         self.currentAction = Message.VIEW
-        self.selectionStart = None
-        self.selectionEnd = None
+        self.selection = selection
 
-    def startSelection(self, x, y):
-        self.selectionStart = (x,y)
-
-    def extendSelectionTo(self, x, y):
-        if self.selectionStart[0] > x and self.selectionStart[1] > y:
-            self.selectionEnd = self.selectionStart
-            self.selectionStart = (x,y)
-        else:
-            self.selectionEnd = (x,y)
+    def move_crosshair(self, dx, dy):
+        self.selection.move(dx,dy)
 
     def pressedOn(self, x, y):
         (x,y) = self.screen.local_to_global(x,y)
         if self.currentAction is not Message.VIEW:
-            self.startSelection(x,y)
+            self.selection.startSelection(x,y)
         else:
             self.screen.move_center(x,y)
 
     def movedOn(self, x, y):
         (x,y) = self.screen.local_to_global(x,y)
         if self.currentAction is not Message.VIEW:
-            self.extendSelectionTo(x,y)
+            self.selection.extendSelectionTo(x,y)
         else:
             self.screen.move_center(x,y)
 
     def releasedOn(self, x, y):
         (x,y) = self.screen.local_to_global(x,y)
         if self.currentAction is not Message.VIEW:
-            self.extendSelectionTo(x,y)
+            self.selection.extendSelectionTo(x,y)
             self.sendAreaMessage()
+            self.selection.endSelection()
 
     def sendAreaMessage(self):
         if self.currentAction is not Message.VIEW:
-            for x in range(self.selectionStart[0], self.selectionEnd[0] + 1):
-                for y in range(self.selectionStart[1], self.selectionEnd[1] + 1):
+            for x in range(self.selection.x, self.selection.x2 + 1):
+                for y in range(self.selection.y, self.selection.y2 + 1):
                     messages.receive(Message(self.currentAction, (x,y)))
 
     def escape(self):
@@ -223,12 +247,13 @@ class Screen(object):
     FEEDBACK = 3
 
     """This class that manages offscreen console and focus."""
-    def __init__(self, facility, menu, prompt):
+    def __init__(self, facility, menu, prompt, selection):
         self.facilityDisplay = FacilityView(facility)
         self.menuDisplay = MenuDisplay(menu)
         self.prompt = prompt
         self.map_area = (20,0,WIDTH-20, HEIGHT-1)
         self.viewport = Viewport(WIDTH-20, HEIGHT, MAP_WIDTH, MAP_HEIGHT)
+        self.selection = selection
         self.build_consoles()
 
     def build_consoles(self):
@@ -241,6 +266,11 @@ class Screen(object):
     def get_real_console(self, console_id):
         return self.consoles[console_id].console
 
+    def globalize_selection(self):
+        (x,y) = self.local_to_global(self.selection.x, self.selection.y)
+        (x2,y2) = self.local_to_global(self.selection.x2, self.selection.y2)
+        return (x,y,x2,y2)
+
     def display(self, delta):
         map_console = self.consoles[self.MAP]
         self.facilityDisplay.display(map_console.console
@@ -249,6 +279,8 @@ class Screen(object):
                                     ,map_console.viewport.getX2()
                                     ,map_console.viewport.getY2()
                                     ,delta)
+        (x,y,x2,y2) = self.globalize_selection()
+        self.facilityDisplay.display_selection(map_console.console, x,y,x2,y2)
         if self.consoles[Screen.PANE].visible:
             self.menuDisplay.display(self.get_real_console(Screen.PANE))
         if self.consoles[Screen.PROMPT].visible:

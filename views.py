@@ -30,10 +30,16 @@ class FacilityView(object):
         self.inactiveTaskDisplayer = DisplayCommand()
 
     def display(self, console, fromx, fromy, tox, toy, delta):
+        #print(fromx, fromy, tox, toy)
         libtcod.console_clear(console)
         self.display_tiles(console, fromx, fromy, tox, toy)
         self.display_employees(console, fromx, fromy, tox, toy)
         self.display_tasks(console, delta, fromx, fromy, tox, toy)
+
+    def display_selection(self, console, fromx, fromy, tox, toy):
+        for y in range(fromy, toy+1):
+            for x in range(fromx, tox+1):
+                self.allTradeDisplayer.execute(x,y, 'X', console)
 
     def display_tiles(self, console, fromx, fromy, tox, toy):
         for y in range(fromy, toy):

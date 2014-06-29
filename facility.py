@@ -224,6 +224,12 @@ class Location(Position):
             self.x = nextX
             self.y = nextY
 
+class Rectangle(Position):
+    def __init__(self, x, y, x2, y2):
+        super(Rectangle, self).__init__(x,y)
+        self.x2 = x2
+        self.y2 = y2
+
 class Employee(object):
     def __init__(self, employeeType):
         self.employeeType = employeeType

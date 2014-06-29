@@ -3,7 +3,7 @@
 # Prototype code for SecFac
 
 import libtcodpy as libtcod
-from secfacUI import FacilityMap, Screen, MenuItem, MenuPane, Prompt
+from secfacUI import FacilityMap, Screen, MenuItem, MenuPane, Prompt, Selection
 from sys import argv
 from messaging import Messenger, Message, message_parser, messages
 from facility import buildFacility
@@ -64,8 +64,9 @@ if __name__ == "__main__":
 
     menu = MenuPane(tree)
     prompt = Prompt()
-    screen = Screen(facility, menu, prompt)
-    game_mode = FacilityMap(menu, screen)
+    selection = Selection(0,0,0,0)
+    screen = Screen(facility, menu, prompt, selection)
+    game_mode = FacilityMap(menu, screen, selection)
     messages.focus = game_mode
     # Use for debugging only, TODO : hide this, make it optional, whatever
     main_game_loop(facility, screen)
