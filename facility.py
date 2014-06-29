@@ -55,6 +55,9 @@ class FacilityPath(object):
             self.is_movement_possible(tile[0], tile[1])]
 
 class Elevator(object):
+    representation = [[libtcod.CHAR_NW,libtcod.CHAR_HLINE, libtcod.CHAR_NE]
+                     ,[libtcod.CHAR_VLINE, ord(' '), libtcod.CHAR_VLINE]
+                     ,[libtcod.CHAR_SW, libtcod.CHAR_HLINE, libtcod.CHAR_SE]]
     def __init__(self, location):
         self.location = location
         self.floors = [location.getY()]

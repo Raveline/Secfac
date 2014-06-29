@@ -36,10 +36,15 @@ class FacilityView(object):
         self.display_employees(console, fromx, fromy, tox, toy)
         self.display_tasks(console, delta, fromx, fromy, tox, toy)
 
-    def display_selection(self, console, fromx, fromy, tox, toy):
-        for y in range(fromy, toy+1):
-            for x in range(fromx, tox+1):
-                self.allTradeDisplayer.execute(x,y, 'X', console)
+    def display_selection(self, console, crosshair, fromx, fromy, tox, toy):
+        x = 0
+        y = 0
+        for lines in crosshair:
+            for columns in lines:
+                self.allTradeDisplayer.execute(fromx + x,fromy + y, 'X', console)
+                x = x + 1
+            y = y + 1
+            x = 0
 
     def display_tiles(self, console, fromx, fromy, tox, toy):
         for y in range(fromy, toy):

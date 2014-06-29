@@ -51,7 +51,8 @@ if __name__ == "__main__":
                         "Select tiles to dig."),
                 MenuItem("(B)uild", 'b', MenuItem.ITEM_VERB
                     , Message.BUILD, "", [
-                    MenuItem("(E)levator", 'e', MenuItem.ITEM_COMPLEMENT, "")]),
+                    MenuItem("(E)levator", 'e', MenuItem.ITEM_COMPLEMENT,
+                    "ELEVATOR")]),
                 MenuItem("(R)ecruit", 'r', MenuItem.ITEM_VERB,
                         Message.RECRUIT, "", [
                     MenuItem("(W)orker", 'w', MenuItem.ITEM_COMPLEMENT,

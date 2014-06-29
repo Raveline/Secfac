@@ -2,12 +2,18 @@ import libtcodpy as libtcod
 from messaging import Focusable, Message, messages
 from views import FacilityView, MenuDisplay
 from constants import WIDTH, HEIGHT, MAP_WIDTH, MAP_HEIGHT
-from facility import Position, Rectangle
+from facility import Position, Rectangle, Elevator
 
 class Selection(Rectangle):
     def __init__(self, x, y, x2, y2):
         super(Selection, self).__init__(x,y,x2,y2)
-        self.crosshair = True
+        self.set_default_crosshair()
+
+    def set_default_crosshair(self):
+        self.crosshair = [['X']]
+
+    def set_crosshair(self, crosshair):
+        self.crosshair = crosshair
 
     def move(self, vx, vy):
         self.x = self.x + vx
@@ -70,6 +76,8 @@ class MenuItem(object):
         self.shortcut = shortcut
 
 class FacilityMap(Focusable):
+    buildings = {'ELEVATOR' : Elevator}
+
     """Handle the main gameplay state. Manage selection, move on map,
     and pane menu navigation."""
     def __init__(self, pane, screen, selection):
@@ -128,6 +136,14 @@ class FacilityMap(Focusable):
             self.currentComplement = None
         if submenu.message_type == MenuItem.ITEM_COMPLEMENT:
             self.currentComplement = submenu.message_part
+        self.handle_complement()
+
+    def handle_complement(self):
+        if self.currentAction == Message.BUILD and self.currentComplement is not None:
+            currentBuilding = self.buildings[self.currentComplement]
+            self.selection.set_crosshair(currentBuilding.representation)
+        else:
+            self.selection.set_default_crosshair()
 
     def append_char(self, char):
         submenu = self.pane.shortcuts.get(char, None)
@@ -280,7 +296,8 @@ class Screen(object):
                                     ,map_console.viewport.getY2()
                                     ,delta)
         (x,y,x2,y2) = self.globalize_selection()
-        self.facilityDisplay.display_selection(map_console.console, x,y,x2,y2)
+        self.facilityDisplay.display_selection(map_console.console,
+                                    self.selection.crosshair,x,y,x2,y2)
         if self.consoles[Screen.PANE].visible:
             self.menuDisplay.display(self.get_real_console(Screen.PANE))
         if self.consoles[Screen.PROMPT].visible:
